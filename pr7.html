@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>PR7 — WebAR (A-Frame + MindAR)</title>
+  <title>PR7 — WebAR</title>
 
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -28,7 +28,6 @@
       z-index: 10;
       pointer-events: none;
       display: flex;
-      align-items: center;
       justify-content: space-between;
       gap: 10px;
     }
@@ -43,9 +42,7 @@
       background: rgba(255,255,255,0.10);
       border: 1px solid rgba(255,255,255,0.18);
       backdrop-filter: blur(10px);
-      box-shadow: 0 14px 34px rgba(0,0,0,.35);
       font-size: 13px;
-      line-height: 1;
       white-space: nowrap;
     }
 
@@ -53,19 +50,13 @@
       width: 10px;
       height: 10px;
       border-radius: 50%;
-      background: #ffcc66;
-      box-shadow: 0 0 0 3px rgba(255,204,102,0.18);
-      flex: 0 0 auto;
+      background: #b7b7b7;
+      box-shadow: 0 0 0 3px rgba(183,183,183,0.18);
     }
 
     .dot.ok {
       background: #44ff99;
       box-shadow: 0 0 0 3px rgba(68,255,153,0.18);
-    }
-
-    .dot.neutral {
-      background: #b7b7b7;
-      box-shadow: 0 0 0 3px rgba(183,183,183,0.18);
     }
 
     .footer {
@@ -82,16 +73,14 @@
     .card {
       pointer-events: auto;
       border-radius: 18px;
-      padding: 14px 14px;
+      padding: 14px;
       background: rgba(0,0,0,0.46);
       border: 1px solid rgba(255,255,255,0.16);
       backdrop-filter: blur(12px);
-      box-shadow: 0 16px 40px rgba(0,0,0,.45);
     }
 
     .title {
-      font-weight: 750;
-      letter-spacing: .2px;
+      font-weight: 700;
       font-size: 14px;
       margin-bottom: 6px;
     }
@@ -113,14 +102,11 @@
       cursor: pointer;
       border: 0;
       border-radius: 14px;
-      padding: 12px 12px;
+      padding: 12px;
       font-size: 15px;
       font-weight: 700;
       flex: 1 1 auto;
-    }
-
-    button.primary {
-      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.90));
+      background: #fff;
       color: #0b1020;
     }
 
@@ -132,9 +118,10 @@
 </head>
 
 <body>
+
   <div class="header">
     <div class="pill">
-      <span id="dot" class="dot neutral"></span>
+      <span id="dot" class="dot"></span>
       <span id="status">Готово к запуску</span>
     </div>
     <div class="pill">PR7 • WebAR</div>
@@ -144,12 +131,11 @@
     <div class="card">
       <div class="title">Наведение на маркер</div>
       <div class="text">
-        Нажмите «Запустить AR», разрешите камеру и наведите её на <b>picture</b>.<br>
+        Нажмите «Запустить AR» и наведите камеру на picture.<br>
         1 палец — перемещение • 2 пальца — масштаб и вращение
       </div>
-
       <div class="actions">
-        <button id="startBtn" class="primary">Запустить AR</button>
+        <button id="startBtn">Запустить AR</button>
       </div>
     </div>
   </div>
@@ -181,11 +167,11 @@
       ></a-entity>
 
       <a-ring
-        position="0 -0.001 0"
+        position="0 0 0"
         rotation="-90 0 0"
         radius-inner="0.18"
         radius-outer="0.36"
-        material="color: #ffffff; opacity: 0.10; transparent: true"
+        material="opacity: 0; transparent: true"
       ></a-ring>
     </a-entity>
   </a-scene>
@@ -194,33 +180,28 @@
     const sceneEl = document.getElementById("scene");
     const markerRoot = document.getElementById("markerRoot");
     const obj = document.getElementById("obj");
-
     const startBtn = document.getElementById("startBtn");
     const statusEl = document.getElementById("status");
     const dotEl = document.getElementById("dot");
 
-    const MOVE_FACTOR = 0.0015;
-
-    function setStatus(text, state) {
-      statusEl.textContent = text;
-      dotEl.classList.remove("ok", "neutral");
-      if (state === "ok") dotEl.classList.add("ok");
-      else dotEl.classList.add("neutral");
-    }
-
-    markerRoot.addEventListener("targetFound", () => setStatus("Маркер распознан", "ok"));
-    markerRoot.addEventListener("targetLost", () => setStatus("Ищу маркер…", "neutral"));
-
     startBtn.addEventListener("click", async () => {
-      setStatus("Запуск камеры…", "neutral");
+      statusEl.textContent = "Запуск камеры…";
       startBtn.disabled = true;
-
       if (!sceneEl.hasLoaded) {
-        await new Promise(res => sceneEl.addEventListener("loaded", res, { once: true }));
+        await new Promise(r => sceneEl.addEventListener("loaded", r, { once: true }));
       }
-
       sceneEl.systems["mindar-image-system"].start();
-      setStatus("Камера запущена", "neutral");
+      statusEl.textContent = "Камера запущена";
+    });
+
+    markerRoot.addEventListener("targetFound", () => {
+      statusEl.textContent = "Маркер распознан";
+      dotEl.classList.add("ok");
+    });
+
+    markerRoot.addEventListener("targetLost", () => {
+      statusEl.textContent = "Ищу маркер…";
+      dotEl.classList.remove("ok");
     });
 
     let mode = "none";
@@ -230,19 +211,21 @@
     let startAngle = 0;
     let startRotY = 0;
 
-    function dist(t1, t2) {
-      return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+    const MOVE_FACTOR = 0.0015;
+
+    function dist(a, b) {
+      return Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
     }
 
-    function angle(t1, t2) {
-      return Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) * 180 / Math.PI;
+    function angle(a, b) {
+      return Math.atan2(b.clientY - a.clientY, b.clientX - a.clientX) * 180 / Math.PI;
     }
 
     function clamp(v, min, max) {
       return Math.max(min, Math.min(max, v));
     }
 
-    document.addEventListener("touchstart", (e) => {
+    document.addEventListener("touchstart", e => {
       if (e.touches.length === 1) {
         mode = "drag";
         lastX = e.touches[0].clientX;
@@ -257,7 +240,7 @@
       }
     }, { passive: true });
 
-    document.addEventListener("touchmove", (e) => {
+    document.addEventListener("touchmove", e => {
       if (mode === "drag" && e.touches.length === 1) {
         const dx = e.touches[0].clientX - lastX;
         const dy = e.touches[0].clientY - lastY;
@@ -266,24 +249,19 @@
         lastX = e.touches[0].clientX;
         lastY = e.touches[0].clientY;
       }
-
       if (mode === "pinch" && e.touches.length === 2) {
         const d = dist(e.touches[0], e.touches[1]);
-        const scale = clamp(startScale * (d / startDist), 0.12, 2.5);
-        obj.object3D.scale.set(scale, scale, scale);
+        const s = clamp(startScale * (d / startDist), 0.12, 2.5);
+        obj.object3D.scale.set(s, s, s);
         const a = angle(e.touches[0], e.touches[1]);
         obj.object3D.rotation.y = (startRotY + (a - startAngle)) * Math.PI / 180;
       }
     }, { passive: true });
 
-    document.addEventListener("touchend", (e) => {
+    document.addEventListener("touchend", e => {
       if (e.touches.length === 0) mode = "none";
-      if (e.touches.length === 1) {
-        mode = "drag";
-        lastX = e.touches[0].clientX;
-        lastY = e.touches[0].clientY;
-      }
     }, { passive: true });
   </script>
+
 </body>
 </html>
